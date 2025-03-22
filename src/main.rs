@@ -7,7 +7,7 @@ mod util;
 
 use std::{env, thread, time::Duration};
 
-use arp::create_arp_request_message;
+use arp::{create_arp_reply_message, create_arp_request_message, is_arp_reply, is_arp_request};
 use dns::*;
 use ether::*;
 use ip::*;
@@ -33,50 +33,7 @@ fn main() {
     let my_udp_port = 12345;
 
     // arp
-    let gateway_macaddr: String;
-    loop {
-        let arp_message = create_arp_request_message(my_ipaddr, my_macaddr, gateway_ipaddr);
-        let arp_frame =
-            create_ethernet_frame(0x0806, "ff:ff:ff:ff:ff:ff", my_macaddr, &arp_message);
-
-        println!("send arp request...");
-        iface.send(&arp_frame).unwrap();
-        thread::sleep(Duration::from_millis(3000));
-
-        let mut optional_gateway_macaddr: Option<String> = None;
-        loop {
-            let mut frame = vec![0; 1500];
-            let recv_result = iface.recv(&mut frame);
-            if recv_result.is_err() {
-                break;
-            }
-
-            // check
-            //// destination is my macaddre
-            if frame[0..6] != parse_macaddr(my_macaddr) {
-                continue;
-            }
-            //// type is arp
-            if frame[12..12 + 2] != [0x08_u8, 0x06_u8] {
-                continue;
-            }
-
-            let message = get_ethernet_frame_data(&frame);
-            //// opecode is reply
-            if message[6..6 + 2] != vec![0x00, 0x02] {
-                continue;
-            }
-
-            optional_gateway_macaddr = Some(print_macaddr(&message[8..8 + 6].to_vec()));
-            break;
-        }
-
-        if optional_gateway_macaddr.is_some() {
-            gateway_macaddr = optional_gateway_macaddr.unwrap();
-            break;
-        }
-    }
-
+    let gateway_macaddr = resolve_macaddr(gateway_ipaddr, my_ipaddr, my_macaddr, &iface).unwrap();
     println!("gateway_macaddr resolved: {}", gateway_macaddr);
 
     // dns
@@ -87,11 +44,46 @@ fn main() {
         my_udp_port,
         my_ipaddr,
         my_macaddr,
+        gateway_ipaddr,
         &gateway_macaddr,
         &iface,
     )
     .unwrap();
     println!("resolved: {}", resolved_ip_addr);
+}
+
+fn resolve_macaddr(
+    ipaddr_str: &str,
+    my_ipaddr: &str,
+    my_macaddr: &str,
+    iface: &Iface,
+) -> Result<String, String> {
+    loop {
+        let arp_message = create_arp_request_message(my_ipaddr, my_macaddr, ipaddr_str);
+        let arp_frame = create_ethernet_frame(
+            0x0806, // arp
+            "ff:ff:ff:ff:ff:ff",
+            my_macaddr,
+            &arp_message,
+        );
+
+        println!("send arp request...");
+        iface.send(&arp_frame).unwrap();
+        thread::sleep(Duration::from_millis(3000));
+
+        loop {
+            let mut frame = vec![0; 1500];
+            let recv_result = iface.recv(&mut frame);
+            if recv_result.is_err() {
+                break;
+            }
+
+            if is_arp_reply(&frame, my_macaddr) {
+                let message = get_ethernet_frame_data(&frame);
+                return Ok(print_macaddr(&message[8..8 + 6].to_vec()));
+            }
+        }
+    }
 }
 
 fn resolve_domain_name(
@@ -101,6 +93,7 @@ fn resolve_domain_name(
     my_udp_port: u16,
     my_ipaddr: &str,
     my_macaddr: &str,
+    gateway_ipaddr: &str,
     gateway_macaddr: &str,
     iface: &Iface,
 ) -> Result<String, String> {
@@ -137,7 +130,25 @@ fn resolve_domain_name(
                 break;
             }
 
-            // check
+            // check arp
+            if is_arp_request(&frame, my_ipaddr, my_macaddr) {
+                let arp_message = create_arp_reply_message(
+                    my_ipaddr,
+                    my_macaddr,
+                    gateway_ipaddr,
+                    gateway_macaddr,
+                );
+                let arp_frame = create_ethernet_frame(
+                    0x0806, // arp
+                    gateway_macaddr,
+                    my_macaddr,
+                    &arp_message,
+                );
+                iface.send(&arp_frame).unwrap();
+                continue;
+            }
+
+            // check dns
             //// destination is my macaddre
             if frame[0..6] != parse_macaddr(my_macaddr) {
                 continue;
@@ -191,6 +202,7 @@ fn resolve_domain_name(
                     my_udp_port,
                     my_ipaddr,
                     my_macaddr,
+                    gateway_ipaddr,
                     gateway_macaddr,
                     iface,
                 )
@@ -244,6 +256,7 @@ fn resolve_domain_name(
                         my_udp_port,
                         my_ipaddr,
                         my_macaddr,
+                        gateway_ipaddr,
                         gateway_macaddr,
                         iface,
                     )
@@ -269,6 +282,7 @@ fn resolve_domain_name(
                     my_udp_port,
                     my_ipaddr,
                     my_macaddr,
+                    gateway_ipaddr,
                     gateway_macaddr,
                     iface,
                 )
