@@ -99,7 +99,7 @@ fn resolve_domain_name(
 ) -> Result<String, String> {
     let root_ip_addr = ROOT_IP_ADDRS[random_range(0..ROOT_IP_ADDRS.len())];
     let dest_ipaddr = server_ipaddr_str.unwrap_or(root_ip_addr);
-    let log_label = format!("[{} -> {}]", name, dest_ipaddr);
+    let log_label = format!("[{} using {}]", name, dest_ipaddr);
 
     loop {
         let dns_message = create_dns_a_question_message(id, &name);
@@ -289,7 +289,7 @@ fn resolve_domain_name(
                 .unwrap();
 
                 println!(
-                    "{} resolving another name server... done. resolved_address={}",
+                    "{} resolving another name server done. resolved_address={}",
                     log_label, resolved_address,
                 );
 
