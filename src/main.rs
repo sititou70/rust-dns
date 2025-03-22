@@ -20,7 +20,8 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let domain_name = args[1].clone();
 
-    let iface = Iface::new("tap0", Mode::Tap).expect("Failed to create a TAP device");
+    let iface =
+        Iface::without_packet_info("tap0", Mode::Tap).expect("Failed to create a TAP device");
 
     // settings
     let gateway_ipaddr = "192.168.70.1";
@@ -31,22 +32,12 @@ fn main() {
     // arp
     let arp_message = create_arp_request_message(my_ipaddr, my_macaddr, gateway_ipaddr);
     let arp_frame = create_ethernet_frame(0x0806, "ff:ff:ff:ff:ff:ff", my_macaddr, &arp_message);
-    iface
-        .send(
-            &[
-                vec![0_u8, 0, 0, 0], // for IFF_NO_PI
-                arp_frame,
-            ]
-            .concat()
-            .to_vec(),
-        )
-        .unwrap();
+    iface.send(&arp_frame).unwrap();
 
     let gateway_macaddr;
     loop {
         let mut frame = vec![0; 1500];
         iface.recv(&mut frame).unwrap();
-        frame.drain(0..4); // for IFF_NO_PI
 
         // check
         //// destination is my macaddre
@@ -119,20 +110,10 @@ fn resolve_domain_name(
     let log_label = format!("[{} -> {}]", name, dest_ipaddr);
 
     println!("{} send dns request to {}...", log_label, dest_ipaddr);
-    iface
-        .send(
-            &[
-                vec![0_u8, 0, 0, 0], // for IFF_NO_PI
-                dns_ethernet_frame,
-            ]
-            .concat()
-            .to_vec(),
-        )
-        .unwrap();
+    iface.send(&dns_ethernet_frame).unwrap();
     loop {
         let mut frame = vec![0; 1500];
         iface.recv(&mut frame).unwrap();
-        frame.drain(0..4); // for IFF_NO_PI
 
         // check
         //// destination is my macaddre
