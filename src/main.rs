@@ -182,12 +182,10 @@ fn resolve_domain_name(
             println!("{} dns reply received:", log_label);
             println!(
                 "{}",
-                format!("|    {}", message)
-                    .replace("\n", "\n|    ")
-                    .replace(
-                        "|    ",
-                        &("    ".repeat(depth as usize) + "|    ").to_string()
-                    )
+                format!("|   {}", message).replace("\n", "\n|   ").replace(
+                    "|   ",
+                    &("    ".repeat(depth as usize) + "|   ").to_string()
+                )
             );
 
             if message.header.rcode != DnsHeaderRcode::NoError {
