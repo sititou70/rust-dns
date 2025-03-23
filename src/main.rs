@@ -177,13 +177,25 @@ fn resolve_domain_name(
             println!("{} dns reply received:", log_label);
             println!("{}", format!(">\t{}", message).replace("\n", "\n>\t"));
 
-            let answer_rr = message.answers.iter().find(|rr| {
+            let answer_a_rr = message.answers.iter().find(|rr| {
                 rr.rr_class == DnsClass::IN && rr.rr_type == DnsType::A && rr.name == name
             });
-            if answer_rr.is_some() {
-                let address = answer_rr.unwrap().rdata.clone();
+            if answer_a_rr.is_some() {
+                let address = answer_a_rr.unwrap().rdata.clone();
                 println!(
-                    "{} answer resource record found. address={}",
+                    "{} target A resource record found in answer section. address={}",
+                    log_label, address
+                );
+                return Ok(address);
+            }
+
+            let additional_a_rr = message.additionals.iter().find(|rr| {
+                rr.rr_class == DnsClass::IN && rr.rr_type == DnsType::A && rr.name == name
+            });
+            if additional_a_rr.is_some() {
+                let address = additional_a_rr.unwrap().rdata.clone();
+                println!(
+                    "{} target A resource record found in additional section. address={}",
                     log_label, address
                 );
                 return Ok(address);
@@ -194,8 +206,22 @@ fn resolve_domain_name(
             });
             if cname_rr.is_some() {
                 let cname = cname_rr.unwrap().rdata.clone();
+                println!("{} canonical name found. cname={}", log_label, cname);
+
+                let a_rr_for_cname = message.answers.iter().find(|rr| {
+                    rr.rr_class == DnsClass::IN && rr.rr_type == DnsType::A && rr.name == cname
+                });
+                if a_rr_for_cname.is_some() {
+                    let address = a_rr_for_cname.unwrap().rdata.clone();
+                    println!(
+                        "{} A resource record for canonical name found. address={}",
+                        log_label, address
+                    );
+                    return Ok(address);
+                }
+
                 println!(
-                    "{} canonical name found, resolving... name={}",
+                    "{} A resource record for canonical name not found, resolving... cname={}",
                     log_label, cname
                 );
 
