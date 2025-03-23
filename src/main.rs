@@ -190,6 +190,12 @@ fn resolve_domain_name(
                     )
             );
 
+            if message.header.rcode != DnsHeaderRcode::NoError {
+                let msg = format!("request failed: {}", message.header.rcode);
+                println!("{} {}", log_label, msg);
+                return Err(msg);
+            }
+
             let answer_a_rr = message.answers.iter().find(|rr| {
                 rr.rr_class == DnsClass::IN && rr.rr_type == DnsType::A && rr.name == name
             });
