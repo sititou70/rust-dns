@@ -21,7 +21,7 @@ fn main() {
     let domain_name = args[1].clone();
 
     let iface =
-        Iface::without_packet_info("tap0", Mode::Tap).expect("Failed to create a TAP device");
+        Iface::without_packet_info("tap0", Mode::Tap).expect("failed to create a tap device");
     iface
         .set_non_blocking()
         .expect("failed to set non blocking");
@@ -49,7 +49,7 @@ fn main() {
         &iface,
     )
     .unwrap();
-    println!("resolved: {}", resolved_ip_addr);
+    println!("domain name resolved: {}", resolved_ip_addr);
 }
 
 fn resolve_macaddr(
@@ -78,7 +78,8 @@ fn resolve_macaddr(
                 break;
             }
 
-            if is_arp_reply(&frame, my_macaddr) {
+            if is_arp_reply(&frame, my_ipaddr, my_macaddr) {
+                println!("arp reply received.");
                 let message = get_ethernet_frame_data(&frame);
                 return Ok(print_macaddr(&message[8..8 + 6].to_vec()));
             }
@@ -130,8 +131,10 @@ fn resolve_domain_name(
                 break;
             }
 
-            // check arp
+            //  arp
             if is_arp_request(&frame, my_ipaddr, my_macaddr) {
+                println!("{} arp request received, send arp reply.", log_label,);
+
                 let arp_message = create_arp_reply_message(
                     my_ipaddr,
                     my_macaddr,
@@ -145,10 +148,11 @@ fn resolve_domain_name(
                     &arp_message,
                 );
                 iface.send(&arp_frame).unwrap();
+
                 continue;
             }
 
-            // check dns
+            //  dns
             //// destination is my macaddre
             if frame[0..6] != parse_macaddr(my_macaddr) {
                 continue;
@@ -170,8 +174,8 @@ fn resolve_domain_name(
                 continue;
             }
 
-            println!("{} dns response message received:", log_label);
-            println!("{}", message);
+            println!("{} dns reply received:", log_label);
+            println!("{}", format!(">\t{}", message).replace("\n", "\n>\t"));
 
             let answer_rr = message.answers.iter().find(|rr| {
                 rr.rr_class == DnsClass::IN && rr.rr_type == DnsType::A && rr.name == name

@@ -41,9 +41,9 @@ pub fn create_arp_reply_message(
     let protocol_size = vec![4_u8];
     let opecode = 2_u16.to_be_bytes().to_vec(); // reply
     let sender_hwaddr = parse_macaddr(sender_macaddr_str);
-    let sender_ipaddr = parse_ipaddr(sender_ipaddr_str);
+    let sender_protoaddr = parse_ipaddr(sender_ipaddr_str);
     let target_hwaddr = parse_macaddr(target_macaddr_str);
-    let target_ipaddr = parse_ipaddr(target_ipaddr_str);
+    let target_protoaddr = parse_ipaddr(target_ipaddr_str);
 
     return [
         hardware_type,
@@ -52,15 +52,15 @@ pub fn create_arp_reply_message(
         protocol_size,
         opecode,
         sender_hwaddr,
-        sender_ipaddr,
+        sender_protoaddr,
         target_hwaddr,
-        target_ipaddr,
+        target_protoaddr,
     ]
     .concat();
 }
 
 pub fn is_arp_request(frame: &Vec<u8>, my_ipaddr: &str, my_macaddr: &str) -> bool {
-    // destination is broadcast
+    // destination is broadcast or my mac address
     if !(frame[0..6] == parse_macaddr("ff:ff:ff:ff:ff:ff")
         || frame[0..6] == parse_macaddr(my_macaddr))
     {
@@ -77,7 +77,7 @@ pub fn is_arp_request(frame: &Vec<u8>, my_ipaddr: &str, my_macaddr: &str) -> boo
         return false;
     };
 
-    // target ipaddr is me
+    // target protocol address is my ip address
     if message[24..24 + 4] != parse_ipaddr(&my_ipaddr) {
         return false;
     }
@@ -85,8 +85,8 @@ pub fn is_arp_request(frame: &Vec<u8>, my_ipaddr: &str, my_macaddr: &str) -> boo
     return true;
 }
 
-pub fn is_arp_reply(frame: &Vec<u8>, my_macaddr: &str) -> bool {
-    // destination is my macaddre
+pub fn is_arp_reply(frame: &Vec<u8>, my_ipaddr: &str, my_macaddr: &str) -> bool {
+    // destination is my mac address
     if frame[0..6] != parse_macaddr(my_macaddr) {
         return false;
     }
@@ -98,6 +98,11 @@ pub fn is_arp_reply(frame: &Vec<u8>, my_macaddr: &str) -> bool {
     let message = get_ethernet_frame_data(&frame);
     // opecode is reply
     if message[6..6 + 2] != vec![0x00, 0x02] {
+        return false;
+    }
+
+    // target protocol address is my ip address
+    if message[24..24 + 4] != parse_ipaddr(my_ipaddr) {
         return false;
     }
 

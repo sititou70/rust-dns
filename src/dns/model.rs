@@ -149,26 +149,26 @@ pub struct DnsMessage {
 }
 impl fmt::Display for DnsMessage {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "header:\n\t{}\n", self.header)?;
+        write!(f, "header:\n\t{}", self.header)?;
 
-        write!(f, "Question Section:\n")?;
+        write!(f, "\nQuestion Section:")?;
         for q in &self.questions {
-            write!(f, "\t{}\n", q)?;
+            write!(f, "\n\t{}", q)?;
         }
 
-        write!(f, "Answer Section:\n")?;
+        write!(f, "\nAnswer Section:")?;
         for a in &self.answers {
-            write!(f, "\t{}\n", a)?;
+            write!(f, "\n\t{}", a)?;
         }
 
-        write!(f, "Authority Section:\n")?;
+        write!(f, "\nAuthority Section:")?;
         for a in &self.authorities {
-            write!(f, "\t{}\n", a)?;
+            write!(f, "\n\t{}", a)?;
         }
 
-        write!(f, "Additional Section:\n")?;
+        write!(f, "\nAdditional Section:")?;
         for a in &self.additionals {
-            write!(f, "\t{}\n", a)?;
+            write!(f, "\n\t{}", a)?;
         }
 
         write!(f, "")
