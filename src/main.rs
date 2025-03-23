@@ -40,7 +40,7 @@ fn main() {
     let resolved_ip_addr = resolve_domain_name(
         &domain_name,
         None,
-        123,
+        0,
         my_udp_port,
         my_ipaddr,
         my_macaddr,
@@ -90,7 +90,7 @@ fn resolve_macaddr(
 fn resolve_domain_name(
     name: &str,
     server_ipaddr_str: Option<&str>,
-    id: u16,
+    depth: u16,
     my_udp_port: u16,
     my_ipaddr: &str,
     my_macaddr: &str,
@@ -100,15 +100,20 @@ fn resolve_domain_name(
 ) -> Result<String, String> {
     let root_ip_addr = ROOT_IP_ADDRS[random_range(0..ROOT_IP_ADDRS.len())];
     let dest_ipaddr = server_ipaddr_str.unwrap_or(root_ip_addr);
-    let log_label = format!("[{} using {}]", name, dest_ipaddr);
+    let log_label = format!(
+        "{}[{} using {}]",
+        "    ".repeat(depth as usize),
+        name,
+        dest_ipaddr
+    );
 
     loop {
-        let dns_message = create_dns_a_question_message(id, &name);
+        let dns_message = create_dns_a_question_message(depth, &name);
         let dns_udp_datagram =
             create_udp_datagram(my_udp_port, 53, &dns_message, my_ipaddr, dest_ipaddr);
         let dns_ip_packet = create_ip_packet(
             17, // udp
-            id,
+            depth,
             my_ipaddr,
             dest_ipaddr,
             &dns_udp_datagram,
@@ -170,12 +175,20 @@ fn resolve_domain_name(
                 Err(_) => continue,
             };
 
-            if message.header.id != id {
+            if message.header.id != depth {
                 continue;
             }
 
             println!("{} dns reply received:", log_label);
-            println!("{}", format!(">\t{}", message).replace("\n", "\n>\t"));
+            println!(
+                "{}",
+                format!("|    {}", message)
+                    .replace("\n", "\n|    ")
+                    .replace(
+                        "|    ",
+                        &("    ".repeat(depth as usize) + "|    ").to_string()
+                    )
+            );
 
             let answer_a_rr = message.answers.iter().find(|rr| {
                 rr.rr_class == DnsClass::IN && rr.rr_type == DnsType::A && rr.name == name
@@ -228,7 +241,7 @@ fn resolve_domain_name(
                 let cname_address = resolve_domain_name(
                     &cname,
                     None,
-                    id + 1,
+                    depth + 1,
                     my_udp_port,
                     my_ipaddr,
                     my_macaddr,
@@ -282,7 +295,7 @@ fn resolve_domain_name(
                     let name_server_address = resolve_domain_name(
                         &name_server_rr.rdata,
                         None,
-                        id + 1,
+                        depth + 1,
                         my_udp_port,
                         my_ipaddr,
                         my_macaddr,
@@ -308,7 +321,7 @@ fn resolve_domain_name(
                 let resolved_address = resolve_domain_name(
                     &name,
                     Some(&name_server_address),
-                    id + 1,
+                    depth + 1,
                     my_udp_port,
                     my_ipaddr,
                     my_macaddr,
