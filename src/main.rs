@@ -318,7 +318,7 @@ fn resolve_domain_name(
                 };
 
                 println!(
-                    "{} resolving another name server... name_server_address={}",
+                    "{} resolving with another name server... name_server_address={}",
                     log_label, name_server_address,
                 );
 
@@ -336,7 +336,7 @@ fn resolve_domain_name(
                 .unwrap();
 
                 println!(
-                    "{} resolving another name server done. resolved_address={}",
+                    "{} resolving with another name server done. resolved_address={}",
                     log_label, resolved_address,
                 );
 
