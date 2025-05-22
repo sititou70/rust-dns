@@ -48,7 +48,7 @@ mod print_dns_domain_name {
     fn case1() {
         let (name, size) = print_dns_domain_name(&TEST_MESSAGE.to_vec(), 20);
         assert_eq!(name, "F.ISI.ARPA.");
-        assert_eq!(size, 12,);
+        assert_eq!(size, 12);
     }
 
     #[test]

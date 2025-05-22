@@ -138,7 +138,7 @@ fn resolve_domain_name(
 
             //  arp
             if is_arp_request(&frame, my_ipaddr, my_macaddr) {
-                println!("{} arp request received, send arp reply.", log_label,);
+                println!("{} arp request received, send arp reply.", log_label);
 
                 let arp_message = create_arp_reply_message(
                     my_ipaddr,
@@ -275,14 +275,14 @@ fn resolve_domain_name(
                     log_label, name_server_rr.rdata
                 );
 
-                let additional_rr_for_name_server = message.additionals.iter().find(|rr| {
+                let additional_a_rr_for_name_server = message.additionals.iter().find(|rr| {
                     rr.rr_class == DnsClass::IN
                         && rr.rr_type == DnsType::A
                         && rr.name == name_server_rr.rdata
                 });
 
-                let name_server_address = if additional_rr_for_name_server.is_some() {
-                    let name_server_address = additional_rr_for_name_server.unwrap().rdata.clone();
+                let name_server_address = if additional_a_rr_for_name_server.is_some() {
+                    let name_server_address = additional_a_rr_for_name_server.unwrap().rdata.clone();
 
                     println!(
                         "{} additional A resource record for name server found. name_server_address={}",

@@ -14,7 +14,7 @@ pub const ROOT_IP_ADDRS: &[&str] = &[
     "202.12.27.33",   // M
 ];
 
-fn parse_dns_name(name_str: &str) -> Vec<u8> {
+fn print_dns_name(name_str: &str) -> Vec<u8> {
     if name_str.len() > 255 {
         panic!("too long domain name {}", name_str);
     }
@@ -32,12 +32,12 @@ fn parse_dns_name(name_str: &str) -> Vec<u8> {
         .concat();
 }
 #[cfg(test)]
-mod parse_dns_name {
-    use crate::dns::util::parse_dns_name;
+mod print_dns_name {
+    use crate::dns::util::print_dns_name;
 
     #[test]
     fn case1() {
-        let bytes = parse_dns_name("example.com.");
+        let bytes = print_dns_name("example.com.");
 
         assert_eq!(
             bytes,
@@ -50,7 +50,7 @@ mod parse_dns_name {
     #[test]
     #[should_panic]
     fn case2() {
-        parse_dns_name(
+        print_dns_name(
             "longnamelongnamelongnamelongnamelongnamelongnamelongnamelongnamelongnamelongnamelongnamelongnamelongnamelongnamelongnamelongnamelongnamelongnamelongnamelongnamelongnamelongnamelongnamelongnamelongnamelongnamelongnamelongnamelongnamelongnamelongnamelongname",
         );
     }
@@ -58,7 +58,7 @@ mod parse_dns_name {
     #[test]
     #[should_panic]
     fn case3() {
-        parse_dns_name("longlabellonglabellonglabellonglabellonglabellonglabellonglabell.com");
+        print_dns_name("longlabellonglabellonglabellonglabellonglabellonglabellonglabell.com");
     }
 }
 
@@ -70,7 +70,7 @@ pub fn create_dns_a_question_message(id_num: u16, name_str: &str) -> Vec<u8> {
     let nsount = 0_u16.to_be_bytes().to_vec();
     let arount = 0_u16.to_be_bytes().to_vec();
 
-    let qname = parse_dns_name(name_str);
+    let qname = print_dns_name(name_str);
     let qtype = 1_u16.to_be_bytes().to_vec(); // A
     let qclass = 1_u16.to_be_bytes().to_vec(); // IN
 
